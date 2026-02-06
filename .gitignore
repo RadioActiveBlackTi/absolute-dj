@@ -1,0 +1,7 @@
+*.ico
+*.png
+
+assets/*.*
+!assets/placeholder.webp
+node_modules/
+dist/

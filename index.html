@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      -webkit-app-region: no-drag; /* 창 드래그 가능 */
+      background-color: rgba(255, 255, 255, 0.00);
+    }
+    #character-container {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: end;
+      padding-bottom: 20px;
+    }
+    #dj-body {
+      width: 75%;
+      height: auto;
+
+      max-width: 100%;
+      
+      /* 클릭 및 인터랙션 설정 */
+      -webkit-app-region: no-drag; 
+      cursor: pointer;
+
+      -webkit-user-drag: none;
+      user-select: none;
+      
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      font-weight: bold;
+      font-size: 20px;
+      color: white;
+
+      /* 부드러운 움직임을 위한 보간 (Interpolation) */
+      transition: transform 0.1s linear;
+      transform-origin: bottom center;
+    }
+
+    /* 1. OFF 상태 (기본): 어둡고 반투명하게 */
+    #dj-body.inactive {
+      opacity: 0.6; /* 반투명 */
+      /* 흑백으로 만들고(grayscale) 밝기를 낮춤(brightness) -> 검은색 오버레이 효과 */
+      filter: grayscale(80%) brightness(60%); 
+    }
+
+    /* 2. ON 상태 (활성): 원래 색상, 불투명 */
+    #dj-body.active {
+      opacity: 1.0;
+      filter: grayscale(0%) brightness(100%);
+      /* 켜졌을 때 살짝 커지는 효과 (선택사항) */
+      /* transform: scale(1.05); */
+    }
+
+    /* 3. 마우스 올렸을 때 (호버): 살짝 밝아짐 */
+    #dj-body:hover {
+      filter: brightness(110%);
+    }
+  </style>
+</head>
+<body>
+  <div id="character-container">
+    <img id="dj-body" class="inactive">
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
