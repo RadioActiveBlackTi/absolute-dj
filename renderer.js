@@ -3,18 +3,23 @@ const fs = require('fs');
 const path = require('path');
 
 let assetsPath = path.join(__dirname, 'assets');
+let configsPath = path.join(__dirname, 'configs');
 
 if (!fs.existsSync(assetsPath)) {
     assetsPath = path.join(process.resourcesPath, 'assets');
 }
 
+if (!fs.existsSync(configsPath)) {
+    configsPath = path.join(process.resourcesPath, 'configs');
+}
+
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
 
-// body.src가 변경되는 시점에 이 함수를 호출해야 합니다.
+// Call this function whenever the skin image is updated to refresh the canvas for pixel checking
 function updateCanvasImage() {
     const img = new Image();
-    img.src = body.src; // 현재 설정된 dj-body의 이미지 소스
+    img.src = body.src; 
     
     img.onload = () => {
         canvas.width = img.width;
@@ -23,6 +28,10 @@ function updateCanvasImage() {
         console.log("Canvas updated for pixel checking");
     };
 }
+
+/******************************************************/
+/******************  Skin Management ******************/
+/******************************************************/
 
 console.log("Skin folder location:", assetsPath);
 
@@ -49,7 +58,133 @@ function loadSkins() {
   }
 }
 
-loadSkins();
+function loadSkin(name) {
+  const skinPath = path.join(assetsPath, name);
+  if (fs.existsSync(skinPath)) {
+    body.src = skinPath;
+    updateCanvasImage();
+  } else {
+    console.error("Skin file does not exist:", skinPath);
+    alert("Skin file does not exist: " + skinPath);
+    ipcRenderer.send('EXIT_APP');
+  }
+}
+
+
+/********************************************************/
+/******************  Config Management ******************/
+/********************************************************/
+
+async function saveConfig(config, name) {
+  try {
+    const appConfigPath = path.join(configsPath, 'app_configs');
+    const jsonString = JSON.stringify(config, null, 2);
+    const configPath = path.join(appConfigPath, name + '.json');
+    await fs.promises.writeFile(configPath, jsonString);
+  } catch (e) {
+    console.error("Failed to save config:", e);
+  }
+}
+
+function loadConfig(name) {
+  try {
+    const appConfigPath = path.join(configsPath, 'app_configs');
+    const configPath = path.join(appConfigPath, name + '.json');
+
+    const fileData = fs.readFileSync(configPath);
+    const restoredConfig = JSON.parse(fileData);
+
+    return restoredConfig;
+  } catch (e) {
+    console.error("Failed to load config:", e);
+    return null;
+  }
+}
+
+async function saveGeneralConfig(config, name) {
+  try {
+    const generalConfigPath = path.join(configsPath);
+    const jsonString = JSON.stringify(config, null, 2);
+    const configPath = path.join(generalConfigPath, name + '.json');
+    await fs.promises.writeFile(configPath, jsonString);
+  } catch (e) {
+    console.error("Failed to save general config:", e);
+  }
+}
+
+function loadGeneralConfig(name) {
+  try {
+    const generalConfigPath = path.join(configsPath);
+    const configPath = path.join(generalConfigPath, name + '.json');
+    const fileData = fs.readFileSync(configPath);
+    const restoredConfig = JSON.parse(fileData);
+
+    return restoredConfig;
+  } catch (e) {
+    console.error("Failed to load general config:", e);
+    return null;
+  }
+}
+
+let generalConfig = loadGeneralConfig('general_config');
+if (!generalConfig) {
+  alert("Failed to load general config, using default values and creating config file.");
+  generalConfig = {
+    window: {
+      width: 400,
+      height: 400,
+      alwaysOnTop: true
+    },
+    appConfig: "default_config",
+  };
+
+  saveGeneralConfig(generalConfig, 'general_config');
+}
+
+let config = loadConfig(generalConfig.appConfig);
+
+if (!config) {
+  alert("Failed to load config, using default values and creating config file.");
+  config = {
+    image: "placeholder.webp", // Default skin image file name in assets folder
+    scale: { 
+      // Scale is calculated by (bass^pow)*amp + bias, then lerped with previous scale by lerpAmt
+      base: 0.8,
+      pow: 1.2,
+      amp: 8.0,
+      bias: -4.0
+    },
+    skew: {
+      // Skew is calculated by (mid^pow)*amp, then lerped with previous skew by lerpAmt.
+      // Direction is decided by data of a specific frequency bin (dirIdx)
+      amp: 80,
+      pow: 2.0,
+      dirIdx: 15
+    },
+    rotate: {
+      // Rotate is calculated by (high/255)*amp + bias, then lerped with previous rotate by lerpAmt.
+      amp: 60,
+      bias: -5
+    },
+    flip: {
+      // When bass exceeds threshold, flip the image horizontally with a certain probability.
+      threshold: 200,
+      prob: 0.6
+    },
+    lerpAmt: {
+      // How much the new calculated value affects the current value each frame (0~1). Higher is more responsive but less smooth.
+      scale: 0.9,
+      skew: 0.3,
+      rotate: 0.2
+    }
+  };
+  saveConfig(config, 'default_config');
+}
+
+
+/*************************************************/
+/******************  Main Logic ******************/
+/*************************************************/
 
 
 const body = document.getElementById('dj-body');
@@ -58,7 +193,8 @@ let analyser;
 let dataArray;
 let isRunning = false;
 
-body.src = path.join(assetsPath, skinList[currentSkinIndex] || 'default.png');
+loadSkins();
+loadSkin(config.image);
 updateCanvasImage();
 let currentScale = 1;
 let currentSkew = 0;
@@ -148,19 +284,38 @@ function renderLoop() {
     high = high / 40;
 
     // Visualization Logic
-    let scaleVal = Math.max(Math.pow((bass / 255), 1.2) * 8.0 - 4.0, 0.8);
+    const scaleBase = config.scale.base;
+    const scalePow = config.scale.pow;
+    const scaleAmp = config.scale.amp;
+    const scaleBias = config.scale.bias;
 
-    let skewVal = Math.pow(mid / 255, 2) * 80;
-    if (dataArray[15] % 2 === 0) skewVal = -skewVal;
+    const skewAmp = config.skew.amp;
+    const skewPow = config.skew.pow;
+    const skewDirIdx = config.skew.dirIdx;
 
-    let rotateVal = (high / 255) * 60 - 5;
+    const rotateAmp = config.rotate.amp;
+    const rotateBias = config.rotate.bias;
 
-    currentScale  = lerp(currentScale, scaleVal, 0.9);
-    currentSkew   = lerp(currentSkew, skewVal, 0.3);
-    currentRotate = lerp(currentRotate, rotateVal, 0.2);
+    const flipThreshold = config.flip.threshold;
+    const flipProb = config.flip.prob;
+
+    const lerpAmtScale = config.lerpAmt.scale;
+    const lerpAmtSkew = config.lerpAmt.skew;
+    const lerpAmtRotate = config.lerpAmt.rotate;
+
+    let scaleVal = Math.max(Math.pow((bass / 255), scalePow) * scaleAmp + scaleBias, scaleBase);
+
+    let skewVal = Math.pow(mid / 255, skewPow) * skewAmp;
+    if (dataArray[skewDirIdx] % 2 === 0) skewVal = -skewVal;
+
+    let rotateVal = (high / 255) * rotateAmp + rotateBias;
+
+    currentScale  = lerp(currentScale, scaleVal, lerpAmtScale);
+    currentSkew   = lerp(currentSkew, skewVal, lerpAmtSkew);
+    currentRotate = lerp(currentRotate, rotateVal, lerpAmtRotate);
 
 
-    if (bass > 200 && Math.random() > 0.6) {
+    if (bass > flipThreshold && Math.random() > flipProb) {
         flipX *= -1; // flipped if -1
     }
 

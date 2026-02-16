@@ -1,0 +1,27 @@
+{
+  "image": "placeholder.webp",
+  "scale": {
+    "base": 0.8,
+    "pow": 1.2,
+    "amp": 8,
+    "bias": -4
+  },
+  "skew": {
+    "amp": 80,
+    "pow": 2,
+    "dirIdx": 15
+  },
+  "rotate": {
+    "amp": 60,
+    "bias": -5
+  },
+  "flip": {
+    "threshold": 200,
+    "prob": 0.6
+  },
+  "lerpAmt": {
+    "scale": 0.9,
+    "skew": 0.3,
+    "rotate": 0.2
+  }
+}

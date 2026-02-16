@@ -7,7 +7,6 @@
     "start": "electron .",
     "dist": "electron-builder"
   },
-
   "build": {
     "appId": "com.RadioActiveBlackTi.AbsoluteDJ",
     "productName": "Absolute DJ",
@@ -30,13 +29,20 @@
       "!*.ico",
       "!assets/*",
       "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
-      "!dist/*"
+      "!dist/*",
+      "!configs/*"
     ],
-
     "extraResources": [
       {
         "from": "assets/",
         "to": "assets/",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "configs/",
+        "to": "configs/",
         "filter": [
           "**/*"
         ]
@@ -50,5 +56,8 @@
   "devDependencies": {
     "electron": "^40.1.0",
     "electron-builder": "^26.7.0"
+  },
+  "dependencies": {
+    "json5": "^2.2.3"
   }
 }
