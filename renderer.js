@@ -140,6 +140,8 @@ if (!generalConfig) {
 
   saveGeneralConfig(generalConfig, 'general_config');
 }
+ipcRenderer.send('RELOAD_GENERAL_CONFIG', generalConfig);
+
 
 let config = loadConfig(generalConfig.appConfig);
 
@@ -337,14 +339,30 @@ let startY = 0;
 let isDragging = false;
 
 
-// Exit on escape key
+// Keyboard Events
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        ipcRenderer.send('EXIT_APP');
-    }
-
     if (e.key === 'Shift') {
         isShift = true;
+    }
+    
+    switch (e.key) {
+      case 'Escape':
+        // Exit on Esc
+        ipcRenderer.send('EXIT_APP');
+        break;
+
+      case 'r':
+        // Shift + R to reload config and skin
+        if (isShift) {
+          try {
+            loadConfig(generalConfig.appConfig);
+            loadSkin(config.image);
+            updateCanvasImage();
+          } catch (e) {
+            console.error(e);
+            alert("Failed to reload config/skin: " + e.message);
+          }
+        }
     }
 });
 

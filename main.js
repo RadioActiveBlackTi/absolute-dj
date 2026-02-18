@@ -43,6 +43,16 @@ ipcMain.on('EXIT_APP', () => {
   app.quit();
 });
 
+ipcMain.on('RELOAD_GENERAL_CONFIG', (event, generalConfig) => {
+  // Initialize window up to general config
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+
+  win.setSize(generalConfig.window.width, generalConfig.window.height);
+  win.setAlwaysOnTop(generalConfig.window.alwaysOnTop);
+
+});
+
 ipcMain.on('RESIZE_WINDOW', (event, { deltaX }) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (!win) return;
